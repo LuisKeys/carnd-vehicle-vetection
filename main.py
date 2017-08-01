@@ -1,12 +1,15 @@
+import sys
 import cv2
 import detection_library as dl
 import matplotlib.pyplot as plt
 import training_classifier as tc
 
+this = sys.modules[__name__]
+
 # Train classifier
 def traing_classifier():
 	print('Train classifier')
-	tc.train_classifier()
+	this.X_scaler, this.svm  = tc.train_classifier()
 
 # Test Image
 def test_image():
@@ -17,7 +20,7 @@ def test_image():
 	image = cv2.imread(path + file_name)	
 
 	# classify
-	dl.detect(image)
+	dl.detect(image, this.svm, this.X_scaler)
 
 	# display image
 	image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
