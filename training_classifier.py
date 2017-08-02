@@ -60,7 +60,7 @@ def extract_features(imgs, cspace='YCrCb', orient=9,
         # apply color conversion if other than 'RGB'
         feature_image = []
         if cspace != 'RGB':
-            feature_image = dl.convert_color(image, conv=cspace)
+            feature_image = dl.convert_color(image, from_space='RGB', to_space=cspace)
         else: 
         	feature_image = np.copy(image)      
 

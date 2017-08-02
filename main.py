@@ -19,8 +19,11 @@ def test_image():
 	file_name = "test1.jpg"
 	image = cv2.imread(path + file_name)	
 
+	scale_factor = 255.0
+
 	# classify
-	out_image = dl.detect(image, this.svc, this.X_scaler)
+	out_image = dl.detect(image, this.svc, this.X_scaler, scale_factor,
+						  color_from='BGR', color_to='YCrCb')
 
 	# display image
 	out_image = cv2.cvtColor(out_image, cv2.COLOR_BGR2RGB)

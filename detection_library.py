@@ -21,11 +21,18 @@ def get_main_params():
   return colorspace, orient, pix_per_cell, cell_per_block, hog_channel, spatial_size, hist_bins
 
 
-def convert_color(img, conv='YCrCb'):
-    if conv == 'YCrCb':
+def convert_color(img, from_space='RGB', to_space='YCrCb'):
+  if from_space=='RGB':
+    if to_space == 'YCrCb':
         return cv2.cvtColor(img, cv2.COLOR_RGB2YCrCb)
-    if conv == 'LUV':
+    if to_space == 'LUV':
         return cv2.cvtColor(img, cv2.COLOR_RGB2LUV)
+
+  if from_space=='BGR':
+    if to_space == 'YCrCb':
+        return cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
+    if to_space == 'LUV':
+        return cv2.cvtColor(img, cv2.COLOR_BGR2LUV)
 
 def get_hog_features(img, orient, pix_per_cell, cell_per_block, 
                         vis=False, feature_vec=True):
@@ -63,13 +70,15 @@ def color_hist(img, nbins=32):    #bins_range=(0, 256)
     return hist_features
 
 # Define a single function that can extract features using hog sub-sampling and make predictions
-def find_cars(img, start_y, stop_y, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins):
+def find_cars(img, color_from, color_to, scale_factor, 
+              start_y, stop_y, scale, svc, X_scaler, 
+              orient, pix_per_cell, cell_per_block, spatial_size, hist_bins):
     
     draw_img = np.copy(img)
-    img = img.astype(np.float32) / 255
+    img = img.astype(np.float32) / scale_factor
     
     img_tosearch = img[start_y:stop_y,:,:]
-    ctrans_tosearch = convert_color(img_tosearch, conv='YCrCb')
+    ctrans_tosearch = convert_color(img_tosearch, from_space='BGR', to_space='YCrCb')
 
     if scale != 1:
         imshape = ctrans_tosearch.shape
@@ -134,7 +143,7 @@ def find_cars(img, start_y, stop_y, scale, svc, X_scaler, orient, pix_per_cell, 
     return draw_img
 
 # Entry point of detection module
-def detect(image, svc, X_scaler):
+def detect(image, svc, X_scaler, scale_factor, color_from = 'BGR', color_to = 'YCrCb'):
 
   # Get main hyper params common to trainnig and prediciton
   colorspace, orient, pix_per_cell, cell_per_block, hog_channel, spatial_size, hist_bins = get_main_params()
@@ -146,6 +155,8 @@ def detect(image, svc, X_scaler):
   scale = 1.5
 
   # Detect cars using sub-sampling windows search
-  out_img = find_cars(image, start_y, stop_y, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins)
+  out_img = find_cars(image, color_from, color_to, scale_factor, start_y, 
+                      stop_y, scale, svc, X_scaler, orient, pix_per_cell, 
+                      cell_per_block, spatial_size, hist_bins)
 
   return out_img
