@@ -148,5 +148,4 @@ def detect(image, svc, X_scaler):
   # Detect cars using sub-sampling windows search
   out_img = find_cars(image, start_y, stop_y, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins)
 
-  plt.imshow(out_img)  
-  plt.show()  
+  return out_img

@@ -1,9 +1,11 @@
+import sys
 import numpy as np
 import glob
 import detection_library as dl
 import matplotlib.image as mpimg
 from sklearn.svm import LinearSVC
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from random import shuffle
 
@@ -47,6 +49,14 @@ def extract_features(imgs, cspace='YCrCb', orient=9,
     for file in imgs:
         # Read in each one by one
         image = mpimg.imread(file)
+
+        # Depending on file extension mpimg.imread scale different
+        # The following code is in place to prevent scale differences
+        scale_factor = 1.0
+        if file.endswith(('.jpeg', '.jpg')):
+        	scale_factor = 255.0
+        image = image.astype(np.float32) / scale_factor
+
         # apply color conversion if other than 'RGB'
         feature_image = []
         if cspace != 'RGB':
@@ -128,7 +138,9 @@ def train_classifier():
 	print('Feature vector length:', len(X_train[0]))
 
 	# Create a linear SVC 
+	parameters = {'C':[1, 10]}
 	svc = LinearSVC()
+	svc = GridSearchCV(svc, parameters)
 
 	# Train model
 	svc.fit(X_train, y_train)

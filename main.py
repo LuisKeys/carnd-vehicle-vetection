@@ -9,7 +9,7 @@ this = sys.modules[__name__]
 # Train classifier
 def traing_classifier():
 	print('Train classifier')
-	this.X_scaler, this.svm  = tc.train_classifier()
+	this.X_scaler, this.svc  = tc.train_classifier()
 
 # Test Image
 def test_image():
@@ -20,11 +20,12 @@ def test_image():
 	image = cv2.imread(path + file_name)	
 
 	# classify
-	dl.detect(image, this.svm, this.X_scaler)
+	out_image = dl.detect(image, this.svc, this.X_scaler)
 
 	# display image
-	image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-	plt.imshow(image)
+	out_image = cv2.cvtColor(out_image, cv2.COLOR_BGR2RGB)
+
+	plt.imshow(out_image)
 	plt.show()
 
 
