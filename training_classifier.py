@@ -3,7 +3,7 @@ import numpy as np
 import glob
 import detection_library as dl
 import matplotlib.image as mpimg
-from sklearn.svm import LinearSVC
+from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
@@ -138,9 +138,9 @@ def train_classifier():
 	print('Feature vector length:', len(X_train[0]))
 
 	# Create a linear SVC 
-	parameters = {'C':[1, 10]}
-	svc = LinearSVC()
-	svc = GridSearchCV(svc, parameters)
+	parameters = {'kernel':('linear', 'rbf'), 'C':[1, 10]}
+	svc = SVC(kernel='rbf', C=10)
+	# svc = GridSearchCV(svc, parameters)
 
 	# Train model
 	svc.fit(X_train, y_train)
