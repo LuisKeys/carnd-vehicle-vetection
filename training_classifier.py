@@ -1,3 +1,4 @@
+import os
 import sys
 import numpy as np
 import glob
@@ -13,26 +14,39 @@ from random import shuffle
 def get_data():
 
 	# Main function internal parameters
-	number_of_samples = 500
-	path_non_cars = './non-cars_smallset/'
-	path_cars = './cars_smallset/'
+	number_of_samples = 5000
+	path_non_cars = './non-vehicles/'
+	path_cars = './vehicles/'
 
-	not_cars_images = glob.glob(path_non_cars + '*.jpeg')
-	cars_images = glob.glob(path_cars + '*.jpeg')
-	x = [[i] for i in range(10)]
-	shuffle(not_cars_images)
-	shuffle(cars_images)
+	# Walk through subfolders
+	cars_images = []
+	not_cars_images = []
+	cars_images_all = []
+	not_cars_images_all = []
+
+	for vehicle_folder in os.walk(path_cars):
+		cars_images = glob.glob(vehicle_folder[0] + '/*.png')
+		for cars_image in cars_images:
+			cars_images_all.append(cars_image)
+
+	for not_vehicle_folder in os.walk(path_non_cars):
+		not_cars_images = glob.glob(not_vehicle_folder[0] + '/*.png')
+		for not_cars_image in not_cars_images:
+			not_cars_images_all.append(not_cars_image)
+
+	shuffle(cars_images_all)
+	shuffle(not_cars_images_all)
 
 	cars = []
 	not_cars = []
 	counter = 0
-	for image in not_cars_images:
+	for image in not_cars_images_all:
 	    if counter < number_of_samples:
 	        not_cars.append(image)
 	        counter += 1
 
 	counter = 0
-	for image in cars_images:
+	for image in cars_images_all:
 	    if counter < number_of_samples:
 	        cars.append(image)
 	        counter += 1
