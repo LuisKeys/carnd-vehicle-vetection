@@ -188,7 +188,7 @@ def find_cars(img, color_from, color_to, scale_factor,
     # Create heatmap
     heatmap = np.zeros_like(img[:,:,0]).astype(np.float)
     heatmap = add_heat(heatmap, bbox_list)
-    heatmap = apply_threshold(heatmap, 2)
+    heatmap = apply_threshold(heatmap, 1)
 
     heatmap = np.clip(heatmap, 0, 255)
 

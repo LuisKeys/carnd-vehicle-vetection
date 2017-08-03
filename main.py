@@ -25,7 +25,7 @@ def process_image(image):
 # Video Process
 def test_video():
 	# Load trained svc and scaler
-	this.svc = joblib.load('svc_rbf_c10.pkl')
+	this.svc = joblib.load('svc_lin_c10.pkl')
 	this.X_scaler = joblib.load('X_scaler.pkl')
 	# Videos paths:
 	video_input = './project_video.mp4'
@@ -60,5 +60,5 @@ def test_image():
 
 
 #traing_classifier()
-test_image()
-#test_video()
+#test_image()
+test_video()
