@@ -9,12 +9,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from random import shuffle
+from sklearn.externals import joblib
 
 # Divide into cars and not_cars
 def get_data():
 
 	# Main function internal parameters
-	number_of_samples = 5000
+	number_of_samples = 4000
 	path_non_cars = './non-vehicles/'
 	path_cars = './vehicles/'
 
@@ -124,6 +125,7 @@ def get_sets(car_features, notcar_features):
 	# Scale
 	X_scaler = StandardScaler().fit(X)
 	scaled_X = X_scaler.transform(X)
+	joblib.dump(X_scaler, 'X_scaler.pkl', compress=9)
 
 	# Labels vector
 	y = np.hstack((np.ones(len(car_features)), np.zeros(len(notcar_features))))
@@ -153,11 +155,13 @@ def train_classifier():
 
 	# Create a linear SVC 
 	parameters = {'kernel':('linear', 'rbf'), 'C':[1, 10]}
-	svc = SVC(kernel='rbf', C=10)
+	svc = SVC(kernel='linear', C=10)
 	# svc = GridSearchCV(svc, parameters)
 
 	# Train model
 	svc.fit(X_train, y_train)
+
+	joblib.dump(svc, 'svc_lin_c10.pkl', compress=9)
 
 	# Check the score of the SVC
 	print('Test Accuracy of SVC = ', round(svc.score(X_test, y_test), 4))
