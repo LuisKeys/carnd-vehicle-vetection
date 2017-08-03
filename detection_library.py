@@ -196,9 +196,6 @@ def find_cars(img, color_from, color_to, scale_factor,
     labels = label(heatmap)
     draw_img = draw_labeled_bboxes(draw_img, labels)
 
-    plt.imshow(heatmap)
-    plt.show()    
-
     return draw_img, heatmap
 
 # Entry point of detection module
