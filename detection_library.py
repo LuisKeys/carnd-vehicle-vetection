@@ -5,6 +5,7 @@ from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 from skimage.feature import hog
 import matplotlib.pyplot as plt
+from scipy.ndimage.measurements import label
 
 # Provides main process hyper params
 def get_main_params():
@@ -20,7 +21,42 @@ def get_main_params():
 
   return colorspace, orient, pix_per_cell, cell_per_block, hog_channel, spatial_size, hist_bins
 
+# Threshold for heatmap
+def apply_threshold(heatmap, threshold):
+    # Zero out pixels below the threshold
+    heatmap[heatmap <= threshold] = 0
+    # Return thresholded map
+    return heatmap
 
+# Add heat map
+def add_heat(heatmap, bbox_list):
+    # Iterate through list of bboxes
+    for bbox in bbox_list:
+        # Add += 1 for all pixels inside each bbox
+        # Assuming each "box" takes the form ((x1, y1), (x2, y2))
+        left, top, right, bottom = bbox
+        heatmap[top:bottom, left:right] += 1
+
+    # Return updated heatmap
+    return heatmap
+
+#Draw labeled boundary boxes based on heat map and resulting labels
+def draw_labeled_bboxes(img, labels):
+    # Iterate through all detected cars
+    for car_number in range(1, labels[1]+1):
+        # Find pixels with each car_number label value
+        nonzero = (labels[0] == car_number).nonzero()
+        # Identify x and y values of those pixels
+        nonzeroy = np.array(nonzero[0])
+        nonzerox = np.array(nonzero[1])
+        # Define a bounding box based on min/max x and y
+        bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
+        # Draw the box on the image
+        cv2.rectangle(img, bbox[0], bbox[1], (0,0,255), 6)
+    # Return the image
+    return img
+
+# Color conversion 
 def convert_color(img, from_space='RGB', to_space='YCrCb'):
   if from_space=='RGB':
     if to_space == 'YCrCb':
@@ -34,6 +70,7 @@ def convert_color(img, from_space='RGB', to_space='YCrCb'):
     if to_space == 'LUV':
         return cv2.cvtColor(img, cv2.COLOR_BGR2LUV)
 
+# Histogram of oriented gradients (HOG) features
 def get_hog_features(img, orient, pix_per_cell, cell_per_block, 
                         vis=False, feature_vec=True):
     # Call with two outputs if vis==True
@@ -53,12 +90,14 @@ def get_hog_features(img, orient, pix_per_cell, cell_per_block,
                        visualise=vis, feature_vector=feature_vec)
         return features
 
+# Spatial features
 def bin_spatial(img, size=(32, 32)):
     color1 = cv2.resize(img[:,:,0], size).ravel()
     color2 = cv2.resize(img[:,:,1], size).ravel()
     color3 = cv2.resize(img[:,:,2], size).ravel()
     return np.hstack((color1, color2, color3))
-                        
+
+# Color histogram features                        
 def color_hist(img, nbins=32):    #bins_range=(0, 256)
     # Compute the histogram of the color channels separately
     channel1_hist = np.histogram(img[:,:,0], bins=nbins)
@@ -78,7 +117,7 @@ def find_cars(img, color_from, color_to, scale_factor,
     img = img.astype(np.float32) / scale_factor
     
     img_tosearch = img[start_y:stop_y,:,:]
-    ctrans_tosearch = convert_color(img_tosearch, from_space='BGR', to_space='YCrCb')
+    ctrans_tosearch = convert_color(img_tosearch, from_space=color_from, to_space=color_to)
 
     if scale != 1:
         imshape = ctrans_tosearch.shape
@@ -99,12 +138,15 @@ def find_cars(img, color_from, color_to, scale_factor,
     cells_per_step = 2  # Instead of overlap, define how many cells to step
     nxsteps = (nxblocks - nblocks_per_window) // cells_per_step
     nysteps = (nyblocks - nblocks_per_window) // cells_per_step
+
+    # holds boundary box list
+    bbox_list = []
     
     # Compute individual channel HOG features for the entire image
     hog1 = get_hog_features(ch1, orient, pix_per_cell, cell_per_block, feature_vec=False)
     hog2 = get_hog_features(ch2, orient, pix_per_cell, cell_per_block, feature_vec=False)
     hog3 = get_hog_features(ch3, orient, pix_per_cell, cell_per_block, feature_vec=False)
-    
+
     for xb in range(nxsteps):
         for yb in range(nysteps):
             ypos = yb*cells_per_step
@@ -138,9 +180,26 @@ def find_cars(img, color_from, color_to, scale_factor,
                 xbox_left = np.int(xleft * scale)
                 ytop_draw = np.int(ytop * scale)
                 win_draw = np.int(window * scale)
-                cv2.rectangle(draw_img,(xbox_left, ytop_draw+start_y),(xbox_left+win_draw,ytop_draw+win_draw+start_y),(0,0,255),6) 
-                
-    return draw_img
+                bbox = (xbox_left, ytop_draw+start_y, xbox_left+win_draw, ytop_draw+win_draw+start_y)
+                left, top, right, bottom = bbox
+                bbox_list.append(bbox)
+                # cv2.rectangle(draw_img,(left, top),(right,bottom),(0,0,255),6) 
+
+    # Create heatmap
+    heatmap = np.zeros_like(img[:,:,0]).astype(np.float)
+    heatmap = add_heat(heatmap, bbox_list)
+    heatmap = apply_threshold(heatmap, 2)
+
+    heatmap = np.clip(heatmap, 0, 255)
+
+    # Find final boxes from heatmap using label function
+    labels = label(heatmap)
+    draw_img = draw_labeled_bboxes(draw_img, labels)
+
+    plt.imshow(heatmap)
+    plt.show()    
+
+    return draw_img, heatmap
 
 # Entry point of detection module
 def detect(image, svc, X_scaler, scale_factor, color_from = 'BGR', color_to = 'YCrCb'):
@@ -148,14 +207,12 @@ def detect(image, svc, X_scaler, scale_factor, color_from = 'BGR', color_to = 'Y
   # Get main hyper params common to trainnig and prediciton
   colorspace, orient, pix_per_cell, cell_per_block, hog_channel, spatial_size, hist_bins = get_main_params()
 
-  print('Detect')
-
   start_y = 400
   stop_y = 656
   scale = 1.5
 
   # Detect cars using sub-sampling windows search
-  out_img = find_cars(image, color_from, color_to, scale_factor, start_y, 
+  out_img, heatmap = find_cars(image, color_from, color_to, scale_factor, start_y, 
                       stop_y, scale, svc, X_scaler, orient, pix_per_cell, 
                       cell_per_block, spatial_size, hist_bins)
 
