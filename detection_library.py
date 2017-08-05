@@ -10,40 +10,64 @@ from scipy.ndimage.measurements import label
 
 this = sys.modules[__name__]
 this.bboxes_per_frame = []
+this.frame_counter = 0
 
 def centroid(bbox):
   left, top = bbox[0]
   right, bottom = bbox[1]
   return (left + (right - left) // 2, top + (bottom - top) // 2)
 
+def check_shape_aspect(bbox):
+  left, top = bbox[0]
+  right, bottom = bbox[1]
+  width = right - left + 1
+  height = bottom - top + 1
+  if width / height <=1.5:
+    if width / height >=0.8:
+      return True
+
+  print(width / height)
+  print('Bad aspect')
+  return False
+
 # Check if a label is related with a previous frame label
 def check_proximity(bbox, hist_frame):
+
+  previous_bbox = bbox
+  status = True
+
   if len(hist_frame) == 0:
-    return True
+    return bbox, previous_bbox, True
 
-  for hist_label in hist_frame:
-    if abs(centroid(bbox)[0] - centroid(bbox)[0]) < 50:
-      if abs(centroid(bbox)[1] - centroid(bbox)[1]) < 50:
-        return True
+  if abs(centroid(bbox)[0] - centroid(hist_frame)[0]) < 50:
+    if abs(centroid(bbox)[1] - centroid(hist_frame)[1]) < 50:
+      status = True
+      previous_bbox = hist_frame
 
-  return False 
+  return bbox, previous_bbox, status
 
 # Process bboxes based on previous frames
 # to provide more stability and reliability
 def process_bbox(bbox):
   
-  hist_range = 0
-  if len(this.bboxes_per_frame) > 1:
-    hist_range = 2
+  previous_bbox = bbox  
+  status = False
 
-  if len(this.bboxes_per_frame) > 2:
-    hist_range = 3
+  if len(this.bboxes_per_frame) == 0:
+    return bbox, previous_bbox, True
 
-  for hist_frame in this.bboxes_per_frame:
-    if check_proximity(bbox, hist_frame):
-      pass
+  for hist_frame in this.bboxes_per_frame[len(this.bboxes_per_frame) - 1]:
+    bbox, previous_bbox, status = check_proximity(bbox, hist_frame)
+    if status:
+      if check_shape_aspect(bbox) == False:
+        if check_shape_aspect(previous_bbox) == True:
+          return previous_bbox, previous_bbox, True
+        else:
+          return previous_bbox, previous_bbox, False
+      else:
+        return bbox, previous_bbox, True
 
-  return bbox, True
+  return bbox, previous_bbox, status
 
 
 # Provides main process hyper params
@@ -93,7 +117,7 @@ def draw_labeled_bboxes(img, labels):
         bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
         final_bboxes.append(bbox)
         # Draw the box on the image
-        bbox, status = process_bbox(bbox)
+        bbox, previous_bbox, status = process_bbox(bbox)
         # Only draw bbox if it is valie
         if status:
           cv2.rectangle(img, bbox[0], bbox[1], (0,0,255), 6)
@@ -157,18 +181,18 @@ def color_hist(img, nbins=32):    #bins_range=(0, 256)
 
 # Define a single function that can extract features using hog sub-sampling and make predictions
 def find_cars(img, color_from, color_to, scale_factor, 
-              start_y, stop_y, scale, svc, X_scaler, 
+              start_y, stop_y, start_x, stop_x, scale, svc, X_scaler, 
               orient, pix_per_cell, cell_per_block, spatial_size, hist_bins):
     
     draw_img = np.copy(img)
     img = img.astype(np.float32) / scale_factor
     
-    img_tosearch = img[start_y:stop_y,:,:]
+    img_tosearch = img[start_y:stop_y,start_x:stop_x,:]
     ctrans_tosearch = convert_color(img_tosearch, from_space=color_from, to_space=color_to)
 
     if scale != 1:
         imshape = ctrans_tosearch.shape
-        ctrans_tosearch = cv2.resize(ctrans_tosearch, (np.int(imshape[1]/scale), np.int(imshape[0]/scale)))
+        ctrans_tosearch = cv2.resize(ctrans_tosearch, (np.int(imshape[1] / scale), np.int(imshape[0] / scale)))
         
     ch1 = ctrans_tosearch[:,:,0]
     ch2 = ctrans_tosearch[:,:,1]
@@ -245,19 +269,60 @@ def find_cars(img, color_from, color_to, scale_factor,
 
     return draw_img, heatmap
 
+# Use last frame region to improve performance, 
+# every N frames everything is scanned to check new vehicles
+
+def get_last_region_to_scan():
+
+  min_y = 10000
+  max_y = -1
+  min_x = 0
+  max_x = 1280
+
+  margin = 50
+ 
+  for hist_bbox in this.bboxes_per_frame[len(this.bboxes_per_frame) - 1]:
+    left, top = hist_bbox[0]
+    right, bottom = hist_bbox[1]
+    
+    if top < min_y:
+      min_y = top
+
+    if bottom > max_y:
+      max_y = bottom
+
+  if min_y == 10000 or min_x == 10000:
+    min_y = 380
+    max_y = 656
+  else:
+    min_y -= margin
+    max_y += margin
+
+  return min_y, max_y, min_x, max_x
+
 # Entry point of detection module
 def detect(image, svc, X_scaler, scale_factor, color_from = 'BGR', color_to = 'YCrCb'):
 
   # Get main hyper params common to trainnig and prediciton
   colorspace, orient, pix_per_cell, cell_per_block, hog_channel, spatial_size, hist_bins = get_main_params()
 
-  start_y = 400
-  stop_y = 656
   scale = 1.5
+
+  if this.frame_counter % 5 == 0 or this.frame_counter == 0:
+    start_y = 380
+    stop_y = 600
+    start_x = 0
+    stop_x = 1280
+  else:
+    start_y, stop_y, start_x, stop_x = get_last_region_to_scan()
+
+  this.frame_counter += 1
 
   # Detect cars using sub-sampling windows search
   out_img, heatmap = find_cars(image, color_from, color_to, scale_factor, start_y, 
-                      stop_y, scale, svc, X_scaler, orient, pix_per_cell, 
+                      stop_y, start_x, stop_x, scale, svc, X_scaler, orient, pix_per_cell, 
                       cell_per_block, spatial_size, hist_bins)
+
+  cv2.rectangle(out_img, (start_x, start_y), (stop_x, stop_y), (255,0,255), 6)
 
   return out_img
