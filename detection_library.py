@@ -1,11 +1,50 @@
 import numpy as np
 import cv2
+import sys
 from skimage.feature import hog
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 from skimage.feature import hog
 import matplotlib.pyplot as plt
 from scipy.ndimage.measurements import label
+
+this = sys.modules[__name__]
+this.bboxes_per_frame = []
+
+def centroid(bbox):
+  left, top = bbox[0]
+  right, bottom = bbox[1]
+  return (left + (right - left) // 2, top + (bottom - top) // 2)
+
+# Check if a label is related with a previous frame label
+def check_proximity(bbox, hist_frame):
+  if len(hist_frame) == 0:
+    return True
+
+  for hist_label in hist_frame:
+    if abs(centroid(bbox)[0] - centroid(bbox)[0]) < 50:
+      if abs(centroid(bbox)[1] - centroid(bbox)[1]) < 50:
+        return True
+
+  return False 
+
+# Process bboxes based on previous frames
+# to provide more stability and reliability
+def process_bbox(bbox):
+  
+  hist_range = 0
+  if len(this.bboxes_per_frame) > 1:
+    hist_range = 2
+
+  if len(this.bboxes_per_frame) > 2:
+    hist_range = 3
+
+  for hist_frame in this.bboxes_per_frame:
+    if check_proximity(bbox, hist_frame):
+      pass
+
+  return bbox, True
+
 
 # Provides main process hyper params
 def get_main_params():
@@ -42,6 +81,7 @@ def add_heat(heatmap, bbox_list):
 
 #Draw labeled boundary boxes based on heat map and resulting labels
 def draw_labeled_bboxes(img, labels):
+    final_bboxes = []
     # Iterate through all detected cars
     for car_number in range(1, labels[1]+1):
         # Find pixels with each car_number label value
@@ -51,8 +91,15 @@ def draw_labeled_bboxes(img, labels):
         nonzerox = np.array(nonzero[1])
         # Define a bounding box based on min/max x and y
         bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
+        final_bboxes.append(bbox)
         # Draw the box on the image
-        cv2.rectangle(img, bbox[0], bbox[1], (0,0,255), 6)
+        bbox, status = process_bbox(bbox)
+        # Only draw bbox if it is valie
+        if status:
+          cv2.rectangle(img, bbox[0], bbox[1], (0,0,255), 6)
+  
+    #Add final bboxes to bboxes per frame list to keep history of all previous frames
+    this.bboxes_per_frame.append(final_bboxes)
     # Return the image
     return img
 
@@ -147,18 +194,18 @@ def find_cars(img, color_from, color_to, scale_factor,
     hog2 = get_hog_features(ch2, orient, pix_per_cell, cell_per_block, feature_vec=False)
     hog3 = get_hog_features(ch3, orient, pix_per_cell, cell_per_block, feature_vec=False)
 
-    for xb in range(nxsteps):
+    for xb in range(nxsteps // 2, nxsteps):
         for yb in range(nysteps):
-            ypos = yb*cells_per_step
-            xpos = xb*cells_per_step
+            ypos = yb * cells_per_step
+            xpos = xb * cells_per_step
             # Extract HOG for this patch
             hog_feat1 = hog1[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel() 
             hog_feat2 = hog2[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel() 
             hog_feat3 = hog3[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel() 
             hog_features = np.hstack((hog_feat1, hog_feat2, hog_feat3))
 
-            xleft = xpos*pix_per_cell
-            ytop = ypos*pix_per_cell
+            xleft = xpos * pix_per_cell
+            ytop = ypos * pix_per_cell
 
             # Extract the image patch
             subimg = cv2.resize(ctrans_tosearch[ytop:ytop+window, xleft:xleft+window], (64,64))
