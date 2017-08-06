@@ -46,6 +46,9 @@ def check_shape_aspect_position(bbox):
   if top > 420 and left > 1000:
     return False
 
+  if top > 400 and left > 1100:
+    return False
+
   if width / height <=1.7:
     if width / height >=0.8:
       return True
@@ -328,7 +331,7 @@ def detect(image, svc, X_scaler, scale_factor, color_from = 'BGR', color_to = 'Y
 
   scale = 1.5
 
-  start_y = 380
+  start_y = 400
   stop_y = 600
   start_x = 0
   stop_x = 1280
