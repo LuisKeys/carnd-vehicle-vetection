@@ -196,20 +196,20 @@ and the following are samples:
 ![frame0]( ./examples/frame_0.png "Frame 0")
 ![heatmap0]( ./examples/heatmap_0.png "Heatmap 0")
 
-![frame1]( ./examples/frame_0.png "Frame 1")
-![heatmap1]( ./examples/heatmap_0.png "Heatmap 1")
+![frame1]( ./examples/frame_1.png "Frame 1")
+![heatmap1]( ./examples/heatmap_1.png "Heatmap 1")
 
-![frame2]( ./examples/frame_0.png "Frame 2")
-![heatmap2]( ./examples/heatmap_0.png "Heatmap 2")
+![frame2]( ./examples/frame_2.png "Frame 2")
+![heatmap2]( ./examples/heatmap_2.png "Heatmap 2")
 
-![frame3]( ./examples/frame_0.png "Frame 3")
-![heatmap3]( ./examples/heatmap_0.png "Heatmap 3")
+![frame3]( ./examples/frame_3.png "Frame 3")
+![heatmap3]( ./examples/heatmap_3.png "Heatmap 3")
 
-![frame4]( ./examples/frame_0.png "Frame 4")
-![heatmap4]( ./examples/heatmap_0.png "Heatmap 4")
+![frame4]( ./examples/frame_4.png "Frame 4")
+![heatmap4]( ./examples/heatmap_4.png "Heatmap 4")
 
-![frame5]( ./examples/frame_0.png "Frame 5")
-![heatmap5]( ./examples/heatmap_0.png "Heatmap 5")
+![frame5]( ./examples/frame_5.png "Frame 5")
+![heatmap5]( ./examples/heatmap_5.png "Heatmap 5")
 
 ### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
 ![alt text][image6]
