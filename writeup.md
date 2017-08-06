@@ -193,7 +193,23 @@ and the following are samples:
 
 ### Here are six frames and their corresponding heatmaps:
 
-![alt text][image5]
+![frame0]( ./examples/frame_0.png "Frame 0")
+![heatmap0]( ./examples/heatmap_0.png "Heatmap 0")
+
+![frame1]( ./examples/frame_0.png "Frame 1")
+![heatmap1]( ./examples/heatmap_0.png "Heatmap 1")
+
+![frame2]( ./examples/frame_0.png "Frame 2")
+![heatmap2]( ./examples/heatmap_0.png "Heatmap 2")
+
+![frame3]( ./examples/frame_0.png "Frame 3")
+![heatmap3]( ./examples/heatmap_0.png "Heatmap 3")
+
+![frame4]( ./examples/frame_0.png "Frame 4")
+![heatmap4]( ./examples/heatmap_0.png "Heatmap 4")
+
+![frame5]( ./examples/frame_0.png "Frame 5")
+![heatmap5]( ./examples/heatmap_0.png "Heatmap 5")
 
 ### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
 ![alt text][image6]
