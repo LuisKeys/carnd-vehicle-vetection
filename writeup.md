@@ -150,7 +150,46 @@ in the previous 2 frames, it is extrapolated to avoid flickering on some frames.
 The positive detections were recorded in line 180 of detection_library.py, and used 
 in process_bbox(bbox) and check_history() functions.
 
+Process box has the following implementation:
 
+# Process bboxes based on previous frames
+# to provide more stability and reliability
+def process_bbox(bbox):
+  
+  previous_bbox = bbox  
+  status = False
+
+  # No history, then assign defaults
+  if len(this.bboxes_per_frame) == 0:
+    return bbox
+
+  # If more than one frame, then walk through previous
+  for hist_frame in this.bboxes_per_frame[len(this.bboxes_per_frame) - 1]:
+    # Get previous related bbox if any
+    bbox, previous_bbox, status = check_proximity(bbox, hist_frame)
+    # If a previous frame was found then continue process
+    if status:
+      # Get avg with previous bbox and current to smooth changes between frames
+      bbox = get_avg_bbox(bbox, previous_bbox)
+
+  # Return defaults
+  return bbox
+
+It walk through previous frame bboxes and check proximity (check_proximity(bbox, hist_frame), line 159),
+which check the distance of centroids and assume that if they are less than max_x_distance and  
+max_y_distance, then they are related.
+If a previous bbox is found then get_avg_bbox(bbox, previous_bbox) is called (line 77) and perform 
+and average of current bbox and previous frame related found (giving more weigth to the previous one).
+
+Then check_shape_aspect_position(bbox) is called (line 40) which filter bboxes where the shouldn't be and 
+of a width / heigh ration out of [0.8;1.7] range.
+
+If nothing was rendered, then check_history() is called (line 16), which basically 
+check for a bbox rendered in the 2 previous frames, and assume it should be there,
+reducing flickering issues.
+
+Heat maps are used for rendering (described before in this doc),
+and the following are samples:
 
 ### Here are six frames and their corresponding heatmaps:
 

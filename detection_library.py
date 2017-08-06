@@ -6,6 +6,7 @@ from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 from skimage.feature import hog
 import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 from scipy.ndimage.measurements import label
 
 this = sys.modules[__name__]
@@ -315,12 +316,16 @@ def find_cars(img, color_from, color_to, scale_factor,
     heatmap = np.zeros_like(img[:,:,0]).astype(np.float)
     heatmap = add_heat(heatmap, bbox_list)
     heatmap = apply_threshold(heatmap, 1)
-
     heatmap = np.clip(heatmap, 0, 255)
 
     # Find final boxes from heatmap using label function
     labels = label(heatmap)
+    
+    # mpimg.imsave("./examples/frame_" + str(this.frame_counter) + ".png", draw_img)
+
     draw_img = draw_labeled_bboxes(draw_img, labels)
+
+    # mpimg.imsave("./examples/heatmap_" + str(this.frame_counter) + ".png", heatmap)
 
     return draw_img
 

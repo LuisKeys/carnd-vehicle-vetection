@@ -30,7 +30,7 @@ def test_video():
 	# Videos paths:
 	video_input = './project_video.mp4'
 	video_output = './project_video_output.mp4'
-	# clip = VideoFileClip(video_input).subclip(18, 20)
+	# clip = VideoFileClip(video_input).subclip(0, 10)
 	clip = VideoFileClip(video_input)
 	white_clip = clip.fl_image(process_image)
 	# Save output video
