@@ -12,22 +12,44 @@ this = sys.modules[__name__]
 this.bboxes_per_frame = []
 this.frame_counter = 0
 
+# Cheks bbox with hitory in the last 3 frames
+def check_history():
+  status = False
+
+  # If more than one frame, then walk through previous
+  if len(this.bboxes_per_frame) > 2:
+    for hist_frame1 in this.bboxes_per_frame[len(this.bboxes_per_frame) - 1]:
+      for hist_frame2 in this.bboxes_per_frame[len(this.bboxes_per_frame) - 2]:
+      # Get previous related bbox if any
+        bbox, previous_bbox, status = check_proximity(hist_frame1, hist_frame2)
+      # If a previous frame was found then continue process
+      if status:
+        # Get avg with previous bbox and current to smooth changes between frames
+        return bbox, True
+
+  return None, False
+
+
+# Gets bbox centroid
 def centroid(bbox):
   left, top = bbox[0]
   right, bottom = bbox[1]
   return (left + (right - left) // 2, top + (bottom - top) // 2)
 
-def check_shape_aspect(bbox):
+# Checks bbox width / height relationship = shape aspect
+def check_shape_aspect_position(bbox):
   left, top = bbox[0]
   right, bottom = bbox[1]
   width = right - left + 1
   height = bottom - top + 1
-  if width / height <=1.5:
+
+  if top > 420 and left > 1000:
+    return False
+
+  if width / height <=1.7:
     if width / height >=0.8:
       return True
 
-  print(width / height)
-  print('Bad aspect')
   return False
 
 # Check if a label is related with a previous frame label
@@ -35,16 +57,37 @@ def check_proximity(bbox, hist_frame):
 
   previous_bbox = bbox
   status = True
+  max_x_distance = 90.0
+  max_y_distance = 90.0
 
   if len(hist_frame) == 0:
     return bbox, previous_bbox, True
 
-  if abs(centroid(bbox)[0] - centroid(hist_frame)[0]) < 50:
-    if abs(centroid(bbox)[1] - centroid(hist_frame)[1]) < 50:
+  if abs(centroid(bbox)[0] - centroid(hist_frame)[0]) < max_x_distance:
+    if abs(centroid(bbox)[1] - centroid(hist_frame)[1]) < max_y_distance:
       status = True
       previous_bbox = hist_frame
 
   return bbox, previous_bbox, status
+
+# Get AVG betweem 2 bbox
+def get_avg_bbox(bbox, previous_bbox):
+  left, top = bbox[0]
+  right, bottom = bbox[1]
+
+  prev_left, prev_top = previous_bbox[0]
+  prev_right, prev_bottom = previous_bbox[1]
+
+  previous_weight = 0.8
+
+  avg_left = int((previous_weight * prev_left + (1.0 - previous_weight) * left))
+  avg_right = int((previous_weight * prev_right + (1.0 - previous_weight) * right))
+  avg_top = int((previous_weight * prev_top + (1.0 - previous_weight) * top))
+  avg_bottom = int((previous_weight * prev_bottom + (1.0 - previous_weight) * bottom))
+
+  avg_bbox = ((avg_left, avg_top), (avg_right, avg_bottom))
+
+  return avg_bbox
 
 # Process bboxes based on previous frames
 # to provide more stability and reliability
@@ -53,21 +96,21 @@ def process_bbox(bbox):
   previous_bbox = bbox  
   status = False
 
+  # No history, then assign defaults
   if len(this.bboxes_per_frame) == 0:
-    return bbox, previous_bbox, True
+    return bbox
 
+  # If more than one frame, then walk through previous
   for hist_frame in this.bboxes_per_frame[len(this.bboxes_per_frame) - 1]:
+    # Get previous related bbox if any
     bbox, previous_bbox, status = check_proximity(bbox, hist_frame)
+    # If a previous frame was found then continue process
     if status:
-      if check_shape_aspect(bbox) == False:
-        if check_shape_aspect(previous_bbox) == True:
-          return previous_bbox, previous_bbox, True
-        else:
-          return previous_bbox, previous_bbox, False
-      else:
-        return bbox, previous_bbox, True
+      # Get avg with previous bbox and current to smooth changes between frames
+      bbox = get_avg_bbox(bbox, previous_bbox)
 
-  return bbox, previous_bbox, status
+  # Return defaults
+  return bbox
 
 
 # Provides main process hyper params
@@ -75,7 +118,7 @@ def get_main_params():
 
   # Main function internal parameters
   colorspace = 'YCrCb' # Can be RGB, LUV, YCrCb
-  orient = 8
+  orient = 9
   pix_per_cell = 8
   cell_per_block = 4
   hog_channel = 'ALL' # Can be 0, 1, 2, or "ALL"
@@ -106,6 +149,7 @@ def add_heat(heatmap, bbox_list):
 #Draw labeled boundary boxes based on heat map and resulting labels
 def draw_labeled_bboxes(img, labels):
     final_bboxes = []
+    draw_rectangles = False
     # Iterate through all detected cars
     for car_number in range(1, labels[1]+1):
         # Find pixels with each car_number label value
@@ -117,15 +161,22 @@ def draw_labeled_bboxes(img, labels):
         bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
         final_bboxes.append(bbox)
         # Draw the box on the image
-        bbox, previous_bbox, status = process_bbox(bbox)
+        bbox = process_bbox(bbox)
         # Only draw bbox if it is valie
-        if status:
-          cv2.rectangle(img, bbox[0], bbox[1], (0,0,255), 6)
+        if check_shape_aspect_position(bbox):
+          draw_rectangles = True
+          cv2.rectangle(img, bbox[0], bbox[1], (0, 255, 0), 6)
+
+    if draw_rectangles == False:
+      bbox, status = check_history()
+      if status:
+        draw_rectangles = True
+        cv2.rectangle(img, bbox[0], bbox[1], (0, 255, 0), 6)
   
     #Add final bboxes to bboxes per frame list to keep history of all previous frames
     this.bboxes_per_frame.append(final_bboxes)
     # Return the image
-    return img
+    return img, draw_rectangles
 
 # Color conversion 
 def convert_color(img, from_space='RGB', to_space='YCrCb'):
@@ -206,7 +257,7 @@ def find_cars(img, color_from, color_to, scale_factor,
     # 64 was the orginal sampling rate, with 8 cells and 8 pix per cell
     window = 64
     nblocks_per_window = (window // pix_per_cell) - cell_per_block + 1
-    cells_per_step = 2  # Instead of overlap, define how many cells to step
+    cells_per_step = 1  # Instead of overlap, define how many cells to step
     nxsteps = (nxblocks - nblocks_per_window) // cells_per_step
     nysteps = (nyblocks - nblocks_per_window) // cells_per_step
 
@@ -227,7 +278,7 @@ def find_cars(img, color_from, color_to, scale_factor,
             hog_feat2 = hog2[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel() 
             hog_feat3 = hog3[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel() 
             hog_features = np.hstack((hog_feat1, hog_feat2, hog_feat3))
-
+            
             xleft = xpos * pix_per_cell
             ytop = ypos * pix_per_cell
 
@@ -267,38 +318,7 @@ def find_cars(img, color_from, color_to, scale_factor,
     labels = label(heatmap)
     draw_img = draw_labeled_bboxes(draw_img, labels)
 
-    return draw_img, heatmap
-
-# Use last frame region to improve performance, 
-# every N frames everything is scanned to check new vehicles
-
-def get_last_region_to_scan():
-
-  min_y = 10000
-  max_y = -1
-  min_x = 0
-  max_x = 1280
-
-  margin = 50
- 
-  for hist_bbox in this.bboxes_per_frame[len(this.bboxes_per_frame) - 1]:
-    left, top = hist_bbox[0]
-    right, bottom = hist_bbox[1]
-    
-    if top < min_y:
-      min_y = top
-
-    if bottom > max_y:
-      max_y = bottom
-
-  if min_y == 10000 or min_x == 10000:
-    min_y = 380
-    max_y = 656
-  else:
-    min_y -= margin
-    max_y += margin
-
-  return min_y, max_y, min_x, max_x
+    return draw_img
 
 # Entry point of detection module
 def detect(image, svc, X_scaler, scale_factor, color_from = 'BGR', color_to = 'YCrCb'):
@@ -308,21 +328,19 @@ def detect(image, svc, X_scaler, scale_factor, color_from = 'BGR', color_to = 'Y
 
   scale = 1.5
 
-  if this.frame_counter % 5 == 0 or this.frame_counter == 0:
-    start_y = 380
-    stop_y = 600
-    start_x = 0
-    stop_x = 1280
-  else:
-    start_y, stop_y, start_x, stop_x = get_last_region_to_scan()
+  start_y = 380
+  stop_y = 600
+  start_x = 0
+  stop_x = 1280
 
   this.frame_counter += 1
 
   # Detect cars using sub-sampling windows search
-  out_img, heatmap = find_cars(image, color_from, color_to, scale_factor, start_y, 
+  out_img, draw_rectangles = find_cars(image, color_from, color_to, scale_factor, start_y, 
                       stop_y, start_x, stop_x, scale, svc, X_scaler, orient, pix_per_cell, 
                       cell_per_block, spatial_size, hist_bins)
 
-  cv2.rectangle(out_img, (start_x, start_y), (stop_x, stop_y), (255,0,255), 6)
+  # Representation of region to scan
+  # cv2.rectangle(out_img, (start_x, start_y), (stop_x, stop_y), (255,0,255), 6)
 
   return out_img

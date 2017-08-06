@@ -30,8 +30,8 @@ def test_video():
 	# Videos paths:
 	video_input = './project_video.mp4'
 	video_output = './project_video_output.mp4'
-	clip = VideoFileClip(video_input).subclip(43, 45)
-	#clip = VideoFileClip(video_input)
+	# clip = VideoFileClip(video_input).subclip(10, 15)
+	clip = VideoFileClip(video_input)
 	white_clip = clip.fl_image(process_image)
 	# Save output video
 	white_clip.write_videofile(video_output, audio=False)
@@ -59,6 +59,6 @@ def test_image():
 	plt.show()
 
 
-#traing_classifier()
-#test_image()
+#traing_classifier() # Remove comment of this line to train classifier
+#test_image() # Remove comment of this line to test image
 test_video()

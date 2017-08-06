@@ -4,7 +4,7 @@ import numpy as np
 import glob
 import detection_library as dl
 import matplotlib.image as mpimg
-from sklearn.svm import SVC
+from sklearn.svm import LinearSVC
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
@@ -15,7 +15,7 @@ from sklearn.externals import joblib
 def get_data():
 
 	# Main function internal parameters
-	number_of_samples = 4000
+	number_of_samples = 8000
 	path_non_cars = './non-vehicles/'
 	path_cars = './vehicles/'
 
@@ -154,9 +154,7 @@ def train_classifier():
 	print('Feature vector length:', len(X_train[0]))
 
 	# Create a linear SVC 
-	parameters = {'kernel':('linear', 'rbf'), 'C':[1, 10]}
-	svc = SVC(kernel='linear', C=10)
-	# svc = GridSearchCV(svc, parameters)
+	svc = LinearSVC(C=10, loss='hinge')
 
 	# Train model
 	svc.fit(X_train, y_train)
