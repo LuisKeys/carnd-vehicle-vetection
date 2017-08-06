@@ -152,27 +152,27 @@ in process_bbox(bbox) and check_history() functions.
 
 Process box has the following implementation:
 
-# Process bboxes based on previous frames
-# to provide more stability and reliability
+#Process bboxes based on previous frames
+#to provide more stability and reliability
 def process_bbox(bbox):
   
   previous_bbox = bbox  
   status = False
 
-  # No history, then assign defaults
+  #No history, then assign defaults
   if len(this.bboxes_per_frame) == 0:
     return bbox
 
-  # If more than one frame, then walk through previous
+  #If more than one frame, then walk through previous
   for hist_frame in this.bboxes_per_frame[len(this.bboxes_per_frame) - 1]:
     # Get previous related bbox if any
     bbox, previous_bbox, status = check_proximity(bbox, hist_frame)
-    # If a previous frame was found then continue process
+    #If a previous frame was found then continue process
     if status:
-      # Get avg with previous bbox and current to smooth changes between frames
+      #Get avg with previous bbox and current to smooth changes between frames
       bbox = get_avg_bbox(bbox, previous_bbox)
 
-  # Return defaults
+  #Return defaults
   return bbox
 
 It walk through previous frame bboxes and check proximity (check_proximity(bbox, hist_frame), line 159),
