@@ -211,12 +211,6 @@ and the following are samples:
 ![frame5]( ./examples/frame_5.png "Frame 5")
 ![heatmap5]( ./examples/heatmap_5.png "Heatmap 5")
 
-### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
-![alt text][image6]
-
-### Here the resulting bounding boxes are drawn onto the last frame in the series:
-![alt text][image7]
-
 
 
 ---
@@ -225,5 +219,10 @@ and the following are samples:
 
 ####1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
-
+The final pipeline works quite stable, although I would like to explore more 
+ways of improving performance and create a more robust filter for false positives.
+Finally with a bigger training set for sure the results will improve.
+Regarding the sliding window process, it can be improved in many ways (for example 
+reducing scan zones based on perspective, and detection of car relative to the lanes
+and road division), so there is lot of room to improve performance for a more realtime 
+process.
