@@ -15,7 +15,7 @@ from sklearn.externals import joblib
 def get_data():
 
 	# Main function internal parameters
-	number_of_samples = 8000
+	number_of_samples = 8700
 	path_non_cars = './non-vehicles/'
 	path_cars = './vehicles/'
 
